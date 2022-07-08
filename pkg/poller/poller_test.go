@@ -9,12 +9,13 @@ import (
 
 func TestPoll(t *testing.T) {
 	blockNumberGetterMock := NewBlockNumberGetterMock()
+	blockNumberGetterMock.BlockNumberResult = 10
 	tickerMock := NewTickerChannelMock()
 
 	wait := make(chan bool, 1)
 	assertions := 0
-	var expectedFrom uint64 = 0
-	var expectedTo uint64 = 0
+	var expectedFrom uint64 = 10
+	var expectedTo uint64 = 10
 	go func() {
 		poll(context.Background(), blockNumberGetterMock, tickerMock, func(fromBlockNumber, toBlockNumber uint64) {
 			assert.Equal(t, fromBlockNumber, expectedFrom)
@@ -23,9 +24,9 @@ func TestPoll(t *testing.T) {
 			wait <- true
 		})
 	}()
+	<-wait
 
 	testCases := [][]uint64{
-		{10, 10, 10},
 		{20, 11, 20},
 		{21, 21, 21},
 		{30, 22, 30},
@@ -37,6 +38,6 @@ func TestPoll(t *testing.T) {
 		expectedTo = testCase[2]
 		tickerMock.Tick()
 		<-wait
-		assert.Equal(t, i+1, assertions)
+		assert.Equal(t, i+2, assertions)
 	}
 }

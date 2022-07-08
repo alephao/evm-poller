@@ -3,7 +3,6 @@ package poller
 import (
 	"context"
 	"log"
-	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -15,7 +14,11 @@ func Poll(ctx context.Context, client *ethclient.Client, interval time.Duration,
 }
 
 func poll(ctx context.Context, blockNumberGetter BlockNumberGetter, ticker TickerChannelGetter, handler func(fromBlockNumber, toBlockNumber uint64)) {
-	var lastBlockNumber uint64 = math.MaxUint64 - 1_000_000
+	lastBlockNumber, err := blockNumberGetter.BlockNumber(ctx)
+	if err != nil {
+		log.Printf("failed to get block: %s", err.Error())
+	}
+	handler(lastBlockNumber, lastBlockNumber)
 
 	for range ticker.TickerChannel() {
 		toBlockNumber, err := blockNumberGetter.BlockNumber(ctx)
