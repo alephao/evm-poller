@@ -10,16 +10,25 @@ import (
 )
 
 func main() {
-	rpcUrl := "https://eth-mainnet.g.alchemy.com/v2/<key>"
+	rpcUrls := []string{
+		"https://eth-mainnet.g.alchemy.com/v2/<key>",
+		"https://mainnet.infura.io/v3/<key>",
+		"https://<name>.discover.quiknode.pro/<key>/",
+	}
 	interval := 20 // polling interval in seconds
 
-	log.Println("Connecting to ethereum...")
-	client, err := ethclient.Dial(rpcUrl)
-	if err != nil {
-		log.Fatalf("failed to dial to RPC: %s", err.Error())
+	log.Println("Connecting to ethereum clients...")
+	ethClients := []*ethclient.Client{}
+	for _, endpoint := range rpcUrls {
+		client, err := ethclient.Dial(endpoint)
+		if err != nil {
+			log.Fatalf("failed to dial to RPC: %s\n", err.Error())
+		}
+		ethClients = append(ethClients, client)
 	}
 
-	poller.Poll(context.Background(), client, time.Duration(interval), func(fromBlockNumber, toBlockNumber uint64) {
+	poller.Poll(context.Background(), ethClients, time.Duration(interval), func(fromBlockNumber, toBlockNumber uint64, unpause func()) {
 		log.Printf("Block Numbers: %d to %d", fromBlockNumber, toBlockNumber)
+		unpause() // Don't forget this
 	})
 }

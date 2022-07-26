@@ -2,12 +2,16 @@ package poller
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPoll(t *testing.T) {
+	blockNumberGetterFailingMock := NewBlockNumberGetterMock()
+	blockNumberGetterFailingMock.BlockNumberError = fmt.Errorf("error")
+
 	blockNumberGetterMock := NewBlockNumberGetterMock()
 	blockNumberGetterMock.BlockNumberResult = 10
 	tickerMock := NewTickerChannelMock()
@@ -17,12 +21,18 @@ func TestPoll(t *testing.T) {
 	var expectedFrom uint64 = 10
 	var expectedTo uint64 = 10
 	go func() {
-		poll(context.Background(), blockNumberGetterMock, tickerMock, func(fromBlockNumber, toBlockNumber uint64) {
-			assert.Equal(t, fromBlockNumber, expectedFrom)
-			assert.Equal(t, toBlockNumber, expectedTo)
-			assertions++
-			wait <- true
-		})
+		poll(
+			context.Background(),
+			[]BlockNumberGetter{blockNumberGetterFailingMock, blockNumberGetterMock},
+			tickerMock,
+			func(fromBlockNumber, toBlockNumber uint64, unpause func(),
+			) {
+				assert.Equal(t, fromBlockNumber, expectedFrom)
+				assert.Equal(t, toBlockNumber, expectedTo)
+				assertions++
+				wait <- true
+				unpause()
+			})
 	}()
 	<-wait
 
